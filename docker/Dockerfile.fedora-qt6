@@ -17,6 +17,7 @@ RUN dnf update -y && \
     ninja-build \
     python3 \
     python3-pip \
+    meson \
     which \
     wget \
     tar \
@@ -27,7 +28,9 @@ RUN dnf update -y && \
     libvpx-devel \
     opus-devel \
     speex-devel \
+    speexdsp-devel \
     libxml2-devel \
+    xerces-c-devel \
     libsrtp-devel \
     libtool \
     autoconf \
@@ -42,6 +45,7 @@ RUN dnf update -y && \
     libXext-devel \
     libXrender-devel \
     mesa-libGL-devel \
+    glew-devel \
     libICE-devel \
     libSM-devel \
     fontconfig-devel \
@@ -78,6 +82,9 @@ RUN dnf update -y && \
     wayland-protocols-devel \
     libxkbcommon-devel \
     && dnf clean all
+
+# Install Python dependencies for Linphone SDK
+RUN pip3 install --no-cache-dir pystache six pyyaml
 
 # Create build directory
 RUN mkdir -p /build && chmod 777 /build

@@ -24,7 +24,19 @@ else
     echo "Linphone repository already exists at ${BUILD_DIR}/linphone-desktop"
 fi
 
+# Enter Linphone source directory
 cd linphone-desktop
+# Check if this is a git repository                                                                                                                                                                                                                                                     
+if [ -f .git/config ]; then                                                                                                                                                                                                                                                             
+    IS_GIT=true                                                                                                                                                                                                                                                                         
+else                                                                                                                                                                                                                                                                                    
+    IS_GIT=false                                                                                                                                                                                                                                                                        
+fi                                                                                                                                                                                                                                                                                      
+# Initialize git submodules if this is a git repository                                                                                                                                                                                                                                 
+if [ "$IS_GIT" = true ]; then                                                                                                                                                                                                                                                           
+    echo "Initializing git submodules..."                                                                                                                                                                                                                                               
+    git submodule update --init --recursive                                                                                                                                                                                                                                             
+fi                                                                                                                                                                                                                                                                                      
 
 # Create build directory
 mkdir -p build
