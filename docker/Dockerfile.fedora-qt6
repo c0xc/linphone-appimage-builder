@@ -81,6 +81,9 @@ RUN dnf update -y && \
     wayland-devel \
     wayland-protocols-devel \
     libxkbcommon-devel \
+    file \
+    fuse \
+    fuse-libs \
     && dnf clean all
 
 # Install Python dependencies for Linphone SDK
@@ -92,15 +95,24 @@ RUN mkdir -p /build && chmod 777 /build
 # Stage 2: Linphone build stage
 FROM linphone-deps AS linphone-build
 
-# Copy build script into the image
+# Copy all build and packaging scripts into the image
 COPY docker/build-linphone-inner.sh.tpl /usr/local/bin/build-linphone.sh
-RUN chmod +x /usr/local/bin/build-linphone.sh
+COPY docker/install-linphone.sh.tpl /usr/local/bin/install-linphone.sh
+COPY docker/package-appimage.sh.tpl /usr/local/bin/package-appimage.sh
+COPY docker/build-and-package.sh.tpl /usr/local/bin/build-and-package.sh
+
+# Make all scripts executable
+RUN chmod +x /usr/local/bin/build-linphone.sh \
+    /usr/local/bin/install-linphone.sh \
+    /usr/local/bin/package-appimage.sh \
+    /usr/local/bin/build-and-package.sh
 
 # Set working directory
 WORKDIR /build
 
-# Set environment variable
+# Set environment variables
 ENV BUILD_DIR=/build
+ENV INSTALL_PREFIX=/build/install
 
 # Default command (can be overridden)
 CMD ["/bin/bash"]
