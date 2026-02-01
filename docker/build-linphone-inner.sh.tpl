@@ -1,19 +1,25 @@
 #!/bin/bash
-# Build Linphone desktop application
-# This script runs INSIDE the container - it will NOT modify the host system
+# Minimal Linphone build script for container
+# This script runs INSIDE the container
 
 set -e
 
 BUILD_DIR="${BUILD_DIR:-/build}"
+SRC_DIR="${SRC_DIR:-/src}"
 
 echo "Building Linphone..."
 
 cd "${BUILD_DIR}"
 
-# Clone Linphone if not already present
+# Check if linphone-desktop exists in /build, if not check /src, otherwise clone
 if [ ! -d "linphone-desktop" ]; then
-    echo "Cloning Linphone repository..."
-    git clone https://gitlab.linphone.org/BC/public/linphone-desktop.git
+    if [ -d "${SRC_DIR}/linphone-desktop" ]; then
+        echo "Copying linphone-desktop from ${SRC_DIR}..."
+        cp -r "${SRC_DIR}/linphone-desktop" .
+    else
+        echo "Cloning Linphone repository..."
+        git clone https://gitlab.linphone.org/BC/public/linphone-desktop.git
+    fi
 else
     echo "Linphone repository already exists at ${BUILD_DIR}/linphone-desktop"
 fi

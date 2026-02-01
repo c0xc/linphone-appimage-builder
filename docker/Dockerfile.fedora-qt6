@@ -1,17 +1,13 @@
-#!/bin/bash
-# Install build dependencies for Linphone
-# This script runs INSIDE the container - it will NOT modify the host system
+# Multi-stage Dockerfile for building Linphone with Qt6
+# Stage 1: Install Linphone build dependencies
+# Stage 2: Build Linphone (done at runtime for flexibility)
 
-set -e
+# Stage 1: Linphone dependencies on top of Qt6 base
+FROM localhost/qt-6.10.1-fedora AS linphone-deps
 
-echo "Installing build dependencies..."
-
-# Update system
-dnf update -y
-
-# Install build tools and dependencies
-# Using dnf (Fedora) but trying to use Rocky8-style packages where possible
-dnf install -y \
+# Install Linphone build dependencies
+RUN dnf update -y && \
+    dnf install -y \
     git \
     cmake \
     gcc \
@@ -78,31 +74,26 @@ dnf install -y \
     atk-devel \
     cairo-devel \
     pango-devel \
-    gdk-pixbuf2-devel \
-    libepoxy-devel \
-    libdrm-devel \
     wayland-devel \
     wayland-protocols-devel \
     libxkbcommon-devel \
-    libudev-devel \
-    systemd-devel \
-    zlib-devel \
-    bzip2-devel \
-    lz4-devel \
-    xz-devel \
-    zstd-devel \
-    libcurl-devel \
-    libuuid-devel \
-    libffi-devel \
-    expat-devel \
-    libarchive-devel \
-    libyaml-devel \
-    readline-devel \
-    ncurses-devel \
-    gettext-devel \
-    intltool \
-    desktop-file-utils \
-    hicolor-icon-theme \
-    || echo "Some packages may not be available, continuing..."
+    && dnf clean all
 
-echo "Dependencies installed successfully."
+# Create build directory
+RUN mkdir -p /build && chmod 777 /build
+
+# Stage 2: Linphone build stage
+FROM linphone-deps AS linphone-build
+
+# Copy build script into the image
+COPY docker/build-linphone-inner.sh.tpl /usr/local/bin/build-linphone.sh
+RUN chmod +x /usr/local/bin/build-linphone.sh
+
+# Set working directory
+WORKDIR /build
+
+# Set environment variable
+ENV BUILD_DIR=/build
+
+# Default command (can be overridden)
+CMD ["/bin/bash"]

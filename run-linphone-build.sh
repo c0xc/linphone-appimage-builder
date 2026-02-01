@@ -48,9 +48,8 @@ build_image() {
     info "This may take a while on first run (installing dependencies)..."
     
     podman build \
-        --target linphone-deps \
         -t "${IMAGE_NAME}" \
-        -f "${SCRIPT_DIR}/Dockerfile.fedora-qt6" \
+        -f "${SCRIPT_DIR}/docker/Dockerfile.fedora-qt6" \
         "${SCRIPT_DIR}"
     
     info "Image built successfully: ${IMAGE_NAME}"
@@ -64,42 +63,49 @@ cleanup_container() {
     fi
 }
 
-# Run container and build Linphone
+# Run container and build Linphone (in foreground)
 run_build() {
-    info "Starting container ${CONTAINER_NAME}..."
+    info "Starting container ${CONTAINER_NAME} in foreground mode..."
+    info "Build will run immediately and you'll see all output in real-time."
+    echo ""
     
-    # Create persistent container
-    podman run -d \
+    # Run container in foreground with interactive terminal
+    # Execute build script, then drop into interactive shell
+    #--volume "${PWD}/build-output:${BUILD_DIR}:Z" \
+    podman run -it \
         --name "${CONTAINER_NAME}" \
-        --volume "${PWD}/build-output:${BUILD_DIR}:Z" \
         "${IMAGE_NAME}" \
-        sleep infinity
+        /bin/bash -c "
+            echo '${GREEN}==>${NC} Container started in foreground mode'
+            echo '${GREEN}==>${NC} Building Linphone inside container...'
+            echo ''
+            
+            if /usr/local/bin/build-linphone.sh; then
+                echo ''
+                echo '${GREEN}==>${NC} Build completed successfully!'
+            else
+                echo ''
+                echo '${YELLOW}==>${NC} Build failed or incomplete, but dropping into shell for debugging...'
+            fi
+            
+            echo ''
+            echo '${GREEN}==>${NC} Dropping into container shell...'
+            echo '  - Build directory: ${BUILD_DIR}'
+            echo '  - To rebuild: /usr/local/bin/build-linphone.sh'
+            echo '  - To exit: type exit or press Ctrl+D'
+            echo ''
+            
+            # Start interactive shell with custom prompt
+            exec /bin/bash --rcfile <(echo 'PS1=\"[\[\033[1;34m\]linphone-build\[\033[0m\]] \u@\h:\w\$ \"')
+        "
     
-    info "Container started"
-    
-    # Execute build inside container (continue even on failure)
-    info "Building Linphone inside container..."
-    if podman exec "${CONTAINER_NAME}" /usr/local/bin/build-linphone.sh; then
-        info "Build completed successfully!"
-    else
-        warn "Build failed or incomplete, but dropping into shell for debugging..."
-    fi
+    info "Container has exited"
 }
 
-# Drop into interactive shell
+# Drop into interactive shell (no longer needed, integrated into run_build)
 interactive_shell() {
-    echo ""
-    info "Dropping into container shell..."
-    echo "  - Build directory: ${BUILD_DIR}"
-    echo "  - To rebuild: /usr/local/bin/build-linphone.sh"
-    echo "  - To exit: type 'exit' or press Ctrl+D"
-    echo ""
-    
-    podman exec -it "${CONTAINER_NAME}" \
-        env PS1='[\[\033[1;34m\]linphone-build\[\033[0m\]] \u@\h:\w\$ ' \
-        /bin/bash
-    
-    info "Exited container shell"
+    # This function is now a no-op since we integrated the shell into run_build
+    return 0
 }
 
 # Main execution
@@ -117,10 +123,9 @@ main() {
     interactive_shell
     
     echo ""
-    info "Container ${CONTAINER_NAME} is still running"
-    info "To re-enter: podman exec -it ${CONTAINER_NAME} /bin/bash"
-    info "To stop: podman stop ${CONTAINER_NAME}"
-    info "To remove: podman rm -f ${CONTAINER_NAME}"
+    info "Build session complete"
+    info "To run again: $0"
+    info "To clean up container: podman rm ${CONTAINER_NAME}"
 }
 
 main "$@"
