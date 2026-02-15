@@ -80,12 +80,24 @@ check_base_image() {
         return 0
     fi
 
-    local ghcr_image="ghcr.io/c0xc/${QT6_BASE_IMAGE}"
+    local ghcr_image
+    # If QT6_BASE_IMAGE already contains a registry/repo part, use it as-is.
+    if [[ "${QT6_BASE_IMAGE}" == */* ]]; then
+        ghcr_image="${QT6_BASE_IMAGE}"
+    else
+        ghcr_image="ghcr.io/c0xc/${QT6_BASE_IMAGE}"
+    fi
+
     warn "Base image not found locally, trying ${ghcr_image}..."
-    
+
     if "${CTR}" pull "${ghcr_image}"; then
-        "${CTR}" tag "${ghcr_image}" "${QT6_BASE_IMAGE}"
-        info "Pulled and tagged: ${ghcr_image} -> ${QT6_BASE_IMAGE}"
+        # Tag pulled image to the local expected name if different
+        if [[ "${ghcr_image}" != "${QT6_BASE_IMAGE}" ]]; then
+            "${CTR}" tag "${ghcr_image}" "${QT6_BASE_IMAGE}" || true
+            info "Pulled and tagged: ${ghcr_image} -> ${QT6_BASE_IMAGE}"
+        else
+            info "Pulled: ${ghcr_image}"
+        fi
         return 0
     fi
 
@@ -148,6 +160,13 @@ run_build() {
                 set -e
                 /usr/local/bin/build-appimage.sh
                 cp /build/output/Linphone-x86_64.AppImage /output/
+
+                # Optional: copy AppDir tarball (only created when AppImage creation fails)
+                # if [ -f /build/output/Linphone-AppDir.tar.gz ]; then
+                #     cp /build/output/Linphone-AppDir.tar.gz /output/
+                #     echo 'AppDir tarball: /output/Linphone-AppDir.tar.gz'
+                # fi
+
                 echo 'AppImage: /output/Linphone-x86_64.AppImage'
             "
         

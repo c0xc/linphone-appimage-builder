@@ -3,7 +3,8 @@
 # Stage 2: Build Linphone (done at runtime for flexibility)
 
 # Stage 1: Linphone dependencies on top of Qt6 base
-FROM localhost/qt-6.10.1-fedora AS linphone-deps
+ARG QT6_BASE_IMAGE=localhost/qt-6.10.1-fedora
+FROM ${QT6_BASE_IMAGE} AS linphone-deps
 
 # Install Linphone build dependencies
 RUN dnf update -y && \
@@ -99,14 +100,12 @@ FROM linphone-deps AS linphone-build
 COPY docker/build-linphone-inner.sh.tpl /usr/local/bin/build-linphone.sh
 COPY docker/install-linphone.sh.tpl /usr/local/bin/install-linphone.sh
 COPY docker/package-appimage.sh.tpl /usr/local/bin/package-appimage.sh
-COPY docker/package-flatpak.sh.tpl /usr/local/bin/package-flatpak.sh
 COPY docker/build-appimage.sh.tpl /usr/local/bin/build-appimage.sh
 
 # Make all scripts executable
 RUN chmod +x /usr/local/bin/build-linphone.sh \
     /usr/local/bin/install-linphone.sh \
     /usr/local/bin/package-appimage.sh \
-    /usr/local/bin/package-flatpak.sh \
     /usr/local/bin/build-appimage.sh
 
 # Set working directory
