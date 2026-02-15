@@ -100,14 +100,14 @@ COPY docker/build-linphone-inner.sh.tpl /usr/local/bin/build-linphone.sh
 COPY docker/install-linphone.sh.tpl /usr/local/bin/install-linphone.sh
 COPY docker/package-appimage.sh.tpl /usr/local/bin/package-appimage.sh
 COPY docker/package-flatpak.sh.tpl /usr/local/bin/package-flatpak.sh
-COPY docker/build-and-package.sh.tpl /usr/local/bin/build-and-package.sh
+COPY docker/build-appimage.sh.tpl /usr/local/bin/build-appimage.sh
 
 # Make all scripts executable
 RUN chmod +x /usr/local/bin/build-linphone.sh \
     /usr/local/bin/install-linphone.sh \
     /usr/local/bin/package-appimage.sh \
     /usr/local/bin/package-flatpak.sh \
-    /usr/local/bin/build-and-package.sh
+    /usr/local/bin/build-appimage.sh
 
 # Set working directory
 WORKDIR /build

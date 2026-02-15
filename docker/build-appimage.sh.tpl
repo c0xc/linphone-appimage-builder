@@ -1,6 +1,7 @@
 #!/bin/bash
 # Complete build and package workflow for Linphone AppImage
 # This script runs INSIDE the container
+# Can be run manually when using interactive shell (podman run -it)
 
 set -e
 

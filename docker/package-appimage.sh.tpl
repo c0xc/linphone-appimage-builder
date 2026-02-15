@@ -189,7 +189,7 @@ if [ ! -f "${APPIMAGETOOL}" ]; then
     chmod +x "${APPIMAGETOOL}"
 fi
 
-# Extract appimagetool if needed
+# Extract appimagetool (required for FUSE-less environments like containers)
 if [ ! -d "${BUILD_DIR}/appimagetool" ]; then
     cd "${BUILD_DIR}"
     mkdir -p appimagetool-extract
@@ -203,14 +203,30 @@ fi
 # Create the final AppImage
 echo "Creating AppImage..."
 cd "${BUILD_DIR}"
+
+# Set environment variable to force extraction mode (no FUSE required)
+export APPIMAGE_EXTRACT_AND_RUN=1
+
+# Run appimagetool from extracted directory (works without FUSE)
 "${BUILD_DIR}/appimagetool/AppRun" "${APPDIR}" "${OUTPUT_DIR}/Linphone-x86_64.AppImage"
 
 echo ""
-echo "============================================"
-echo "AppImage created successfully!"
-echo "Location: ${OUTPUT_DIR}/Linphone-x86_64.AppImage"
-echo "============================================"
-echo ""
-echo "To extract from container, run on host:"
-echo "  podman cp linphone-build:/build/output/Linphone-x86_64.AppImage ."
-echo ""
+if [ -f "${OUTPUT_DIR}/Linphone-x86_64.AppImage" ]; then
+    echo ""
+    echo "============================================"
+    echo "AppImage created successfully!"
+    echo "Location: ${OUTPUT_DIR}/Linphone-x86_64.AppImage"
+    echo "============================================"
+    echo ""
+    echo "To extract from container, run on host:"
+    echo "  podman cp linphone-build:/build/output/Linphone-x86_64.AppImage ."
+    echo ""
+else
+    echo ""
+    echo "WARNING: AppImage not created. Creating AppDir tarball for debugging..."
+    mkdir -p "${OUTPUT_DIR}"
+    tar -C "${APPIMAGE_DIR}" -czf "${OUTPUT_DIR}/Linphone-AppDir.tar.gz" "AppDir" || true
+    echo "Created ${OUTPUT_DIR}/Linphone-AppDir.tar.gz for inspection"
+    echo "Check logs for mount/FUSE errors and try building on a runner with /dev/fuse or a self-hosted runner."
+    echo ""
+fi

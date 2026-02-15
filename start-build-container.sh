@@ -12,6 +12,11 @@ IMAGE_NAME="linphone-build-env:fedora-qt6"
 CONTAINER_NAME="linphone-build"
 BUILD_DIR="/build"
 WORKSPACE="${WORKSPACE:-}"
+OUTPUT_DIR="${OUTPUT_DIR:-${SCRIPT_DIR}/build-output}"
+CI_MODE="${CI_MODE:-false}"
+
+# Fix env
+export DBUS_SESSION_BUS_ADDRESS=
 
 # Use podman by default
 CTR="${CTR:-podman}"
@@ -123,47 +128,65 @@ cleanup_container() {
     fi
 }
 
-# Run container and build Linphone (in foreground)
 run_build() {
-    info "Starting container ${CONTAINER_NAME}..."
-    info "Build runs immediately; shell opens afterwards."
-    echo ""
-
-    # Run container in foreground with interactive terminal
-    # Execute build script, then drop into interactive shell
     local mount_args=()
     if [ -n "${WORKSPACE}" ]; then
         mount_args+=(--volume "${WORKSPACE}:${BUILD_DIR}${VOLUME_SUFFIX}")
     fi
 
-    "${CTR}" run -it \
-        --name "${CONTAINER_NAME}" \
-        "${mount_args[@]}" \
-        "${IMAGE_NAME}" \
-        /bin/bash -c "
-            echo 'Container started'
-            echo 'Building Linphone...'
-            echo ''
+    mkdir -p "${OUTPUT_DIR}"
 
-            if /usr/local/bin/build-linphone.sh; then
+    if [ "${CI_MODE}" = "true" ]; then
+        info "Running in CI mode (non-interactive)"
+        mount_args+=(--volume "${OUTPUT_DIR}:/output${VOLUME_SUFFIX}")
+        
+        "${CTR}" run --rm \
+            --name "${CONTAINER_NAME}" \
+            "${mount_args[@]}" \
+            "${IMAGE_NAME}" \
+            /bin/bash -c "
+                set -e
+                /usr/local/bin/build-appimage.sh
+                cp /build/output/Linphone-x86_64.AppImage /output/
+                echo 'AppImage: /output/Linphone-x86_64.AppImage'
+            "
+        
+        info "AppImage: ${OUTPUT_DIR}/Linphone-x86_64.AppImage"
+    else
+        info "Starting container ${CONTAINER_NAME}..."
+        info "Build runs immediately; shell opens afterwards."
+        echo ""
+
+        "${CTR}" run -it \
+            --name "${CONTAINER_NAME}" \
+            "${mount_args[@]}" \
+            "${IMAGE_NAME}" \
+            /bin/bash -c "
+                echo 'Container started'
+                echo 'Building Linphone...'
                 echo ''
-                echo 'Build completed successfully'
-            else
+
+                if /usr/local/bin/build-linphone.sh; then
+                    echo ''
+                    echo 'Build completed successfully'
+                else
+                    echo ''
+                    echo 'WARNING: Build failed or incomplete, but dropping into shell for debugging...'
+                fi
+
                 echo ''
-                echo 'WARNING: Build failed or incomplete, but dropping into shell for debugging...'
-            fi
+                echo 'Dropping into shell'
+                echo '  - Build directory: ${BUILD_DIR}'
+                echo '  - To rebuild: /usr/local/bin/build-linphone.sh'
+                echo '  - To create AppImage: /usr/local/bin/build-appimage.sh'
+                echo '  - To exit: type exit or press Ctrl+D'
+                echo ''
 
-            echo ''
-            echo 'Dropping into shell'
-            echo '  - Build directory: ${BUILD_DIR}'
-            echo '  - To rebuild: /usr/local/bin/build-linphone.sh'
-            echo '  - To exit: type exit or press Ctrl+D'
-            echo ''
+                exec /bin/bash
+            "
 
-            exec /bin/bash
-        "
-
-    info "Container has exited"
+        info "Container has exited"
+    fi
 }
 
 main() {
@@ -183,13 +206,18 @@ main() {
         check_base_image
         build_image
     fi
-    cleanup_container
+    if [ "${CI_MODE}" != "true" ]; then
+        cleanup_container
+    fi
+    
     run_build
 
-    echo ""
-    info "Build session complete"
-    info "To run again: $0"
-    info "To clean up container: ${CTR} rm ${CONTAINER_NAME}"
+    if [ "${CI_MODE}" != "true" ]; then
+        echo ""
+        info "Build session complete"
+        info "To run again: $0"
+        info "To clean up container: ${CTR} rm ${CONTAINER_NAME}"
+    fi
 }
 
 main "$@"

@@ -1,0 +1,42 @@
+name: Build AppImage
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      QT6_BASE_IMAGE: ${{ secrets.QT6_BASE_IMAGE_REF || 'ghcr.io/c0xc/qt6-fedora:6.10.1' }}
+      CTR: docker
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Linphone AppImage
+        run: CI_MODE=true ./start-build-container.sh
+
+      - name: Inspect build-output
+        run: |
+          echo 'Listing build-output directory'
+          ls -al build-output || true
+          echo 'Listing any AppImage files'
+          ls -al build-output/*.AppImage || true
+
+      - name: Upload AppImage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Linphone-AppImage
+          path: build-output/*.AppImage
+
+      - name: Create Release and attach artifact (on tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build-output/Linphone-x86_64.AppImage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
