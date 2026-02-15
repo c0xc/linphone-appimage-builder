@@ -1,35 +1,16 @@
-# Linphone Build Script for Podman
+# Linphone AppImage Build Container
 
-This script builds Linphone desktop application inside a Podman container, ensuring **no dependencies are installed on the host system**. All operations happen inside the container.
+This is an unofficial build container for Linphone.
+It creates AppImage files which should run on most modern Linux desktop installations without installation.
 
-## Important
+## Details
 
-**This script ONLY manages containers. It does NOT modify the host system.**
-- All dependencies are installed inside the container
-- All builds happen inside the container
-- The host system remains unchanged
-
-## Features
-
-- **Containerized builds**: All dependencies and build artifacts stay in the container
-- **Incremental builds**: Container persists between runs, so you can modify source and rebuild without reinstalling dependencies
-- **Configurable base image**: Set `BASE_IMAGE` environment variable to use a different base image
-- **Workspace mounting**: Set `WORKSPACE` environment variable to mount a directory to `/build` in the container
-- **Easy rebuild**: After entering the container, use `rebuild-linphone` command to rebuild
-- **Clean separation**: Each operation is in its own script file for clarity
-
-## Script Structure
-
-- `build-linphone.sh` - Main script (runs on host, manages containers)
-- `install-deps.sh` - Installs dependencies (runs inside container)
-- `build-linphone-inner.sh` - Builds Linphone (runs inside container)
-- `rebuild-linphone-inner.sh` - Rebuilds Linphone (runs inside container)
-- `setup-container-env.sh` - Sets up container environment (runs inside container)
+I'm using Podman locally. I use Podman instead of Docker, whenever possible.
 
 ## Requirements
 
 - Podman installed and configured
-- Base image: `qt-6.4-fedora-36:latest` (or set `BASE_IMAGE` environment variable)
+- Base image: `qt-6.4-fedora-36:latest` by c0xc (or set `BASE_IMAGE` environment variable)
 
 ## Usage
 
@@ -42,47 +23,17 @@ This script builds Linphone desktop application inside a Podman container, ensur
 ### With workspace mounting
 
 ```bash
-export WORKSPACE=/path/to/your/workspace
-./build-linphone.sh
+WORKSPACE=~/tmp/ ./build-linphone.sh
 ```
 
 The workspace directory will be mounted to `/build` inside the container.
 
-### Using a different base image
-
-```bash
-export BASE_IMAGE=your-qt-image:tag
-./build-linphone.sh
-```
-
-### First run
-
-On the first run, the script will:
-1. Create a container named `linphone-build` from the base image
-2. Install all build dependencies
-3. Clone the Linphone repository (if not already present)
-4. Build Linphone
-5. Drop you into an interactive shell
-
-### Subsequent runs
-
-On subsequent runs, the script will:
-1. Reuse the existing container (with all dependencies already installed)
-2. Rebuild Linphone (or continue from previous build)
-3. Drop you into an interactive shell
-
 ### Rebuilding inside the container
 
-Once inside the container, you can rebuild Linphone using:
+Fix things inside the container:
 
 ```bash
 rebuild-linphone
-```
-
-Or:
-
-```bash
-/usr/local/bin/rebuild-linphone.sh
 ```
 
 Or manually:
@@ -113,6 +64,6 @@ To enter the container without running the build:
 podman exec -it linphone-build /bin/bash
 ```
 
-## Safeguards
+## Author
 
-The script includes a safeguard that prevents it from running inside a container. It must be run on the host system to properly manage Podman containers.
+Philip Seeger (philip@c0xc.net)
