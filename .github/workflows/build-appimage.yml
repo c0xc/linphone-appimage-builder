@@ -23,7 +23,7 @@ jobs:
 
       - name: Log in to GHCR (for private base images)
         uses: docker/login-action@v3
-        if: ${{ secrets.GHCR_PAT != '' }}
+        if: ${{ vars.USE_GHCR_LOGIN == 'true' }}
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
