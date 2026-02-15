@@ -2,6 +2,12 @@ name: Build AppImage
 
 on:
   workflow_dispatch:
+    inputs:
+      use_fork:
+        description: 'Use fork instead of official repo'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -13,6 +19,7 @@ jobs:
     env:
       QT6_BASE_IMAGE: ${{ secrets.QT6_BASE_IMAGE_REF || 'ghcr.io/c0xc/qt6-fedora:6.10.1' }}
       CTR: docker
+      USE_FORK: ${{ inputs.use_fork }}
 
     steps:
       - name: Checkout

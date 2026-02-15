@@ -14,6 +14,7 @@ BUILD_DIR="/build"
 WORKSPACE="${WORKSPACE:-}"
 OUTPUT_DIR="${OUTPUT_DIR:-${SCRIPT_DIR}/build-output}"
 CI_MODE="${CI_MODE:-false}"
+USE_FORK="${USE_FORK:-}"
 
 # Fix env
 export DBUS_SESSION_BUS_ADDRESS=
@@ -148,6 +149,11 @@ run_build() {
 
     mkdir -p "${OUTPUT_DIR}"
 
+    local env_args=()
+    if [ -n "${USE_FORK}" ]; then
+        env_args+=(--env "USE_FORK=${USE_FORK}")
+    fi
+
     if [ "${CI_MODE}" = "true" ]; then
         info "Running in CI mode (non-interactive)"
         mount_args+=(--volume "${OUTPUT_DIR}:/output${VOLUME_SUFFIX}")
@@ -155,6 +161,7 @@ run_build() {
         "${CTR}" run --rm \
             --name "${CONTAINER_NAME}" \
             "${mount_args[@]}" \
+            "${env_args[@]}" \
             "${IMAGE_NAME}" \
             /bin/bash -c "
                 set -e
@@ -179,6 +186,7 @@ run_build() {
         "${CTR}" run -it \
             --name "${CONTAINER_NAME}" \
             "${mount_args[@]}" \
+            "${env_args[@]}" \
             "${IMAGE_NAME}" \
             /bin/bash -c "
                 echo 'Container started'
