@@ -4,32 +4,51 @@
 
 set -e
 
+# Environment
 BUILD_DIR="${BUILD_DIR:-/build}"
 SRC_DIR="${SRC_DIR:-/src}"
 USE_FORK="${USE_FORK:-}"
 FORK_REPO="https://github.com/c0xc/linphone-desktop.git"
 OFFICIAL_REPO="https://gitlab.linphone.org/BC/public/linphone-desktop.git"
+# Git repo url (for git clone, only if sources not found)
+if [ "${USE_FORK}" = "true" ] || [ "${USE_FORK}" = "1" ]; then
+    repo_url="${FORK_REPO}" # USE_FORK
+else
+    repo_url="${OFFICIAL_REPO}" # Official BC repo (default)
+fi
+repo_ref="${LINPHONE_REF:-master}"
 
 echo "Building Linphone..."
 
 cd "${BUILD_DIR}"
 
-# Check if linphone-desktop exists in /build, if not check /src, otherwise clone
-if [ ! -d "linphone-desktop" ]; then
-    if [ -d "${SRC_DIR}/linphone-desktop" ]; then
-        echo "Copying linphone-desktop from ${SRC_DIR}..."
-        cp -r "${SRC_DIR}/linphone-desktop" .
-    else
-        if [ "${USE_FORK}" = "true" ] || [ "${USE_FORK}" = "1" ]; then
-            echo "Cloning Linphone repository from fork: ${FORK_REPO}..."
-            git clone "${FORK_REPO}" linphone-desktop
-        else
-            echo "Cloning Linphone repository from official source: ${OFFICIAL_REPO}..."
-            git clone "${OFFICIAL_REPO}" linphone-desktop
-        fi
+# Locate or obtain linphone-desktop source:
+# Priority: existing directory -> copy from SRC_DIR -> extract tar.gz -> extract tar.xz -> git clone
+if [ -d "${SRC_DIR}/linphone-desktop" ]; then
+    # Sources already in SRC_DIR, use them
+    # they might contain manual patches!
+    echo "Copying linphone-desktop from ${SRC_DIR}..."
+    cp -r "${SRC_DIR}/linphone-desktop" .
+elif [ -f "${BUILD_DIR}/linphone-desktop.tar.gz" ]; then
+    # Tarball with sources found, extract it (might contain patches)
+    echo "Extracting linphone-desktop from ${BUILD_DIR}/linphone-desktop.tar.gz..."
+    tar -xzf "${BUILD_DIR}/linphone-desktop.tar.gz" -C "${BUILD_DIR}"
+    if [ ! -d "linphone-desktop" ]; then
+        echo "ERROR: extraction did not create ${BUILD_DIR}/linphone-desktop"
+        exit 1
+    fi
+elif [ -f "${BUILD_DIR}/linphone-desktop.tar.xz" ]; then
+    # Tarball with sources found, extract it (might contain patches)
+    echo "Extracting linphone-desktop from ${BUILD_DIR}/linphone-desktop.tar.xz..."
+    tar -xJf "${BUILD_DIR}/linphone-desktop.tar.xz" -C "${BUILD_DIR}"
+    if [ ! -d "linphone-desktop" ]; then
+        echo "ERROR: extraction did not create ${BUILD_DIR}/linphone-desktop"
+        exit 1
     fi
 else
-    echo "Linphone repository already exists at ${BUILD_DIR}/linphone-desktop"
+    # Clone from git repository (official or fork)
+    echo "Cloning Linphone repository (branch: ${repo_ref}) from: ${repo_url}..."
+    git clone --branch "${repo_ref}" --depth 1 "${repo_url}" linphone-desktop
 fi
 
 # Enter Linphone source directory

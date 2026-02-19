@@ -1,0 +1,81 @@
+name: Weekly Build & Release AppImage
+
+on:
+  schedule:
+    - cron: '0 0 * * 0' # weekly (Sunday 00:00 UTC)
+
+permissions:
+  contents: write
+  packages: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      QT6_BASE_IMAGE: ${{ secrets.QT6_BASE_IMAGE_REF || 'ghcr.io/c0xc/qt6-fedora:6.10.1' }}
+      CTR: docker
+      USE_FORK: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR (am supposed to make my base image private)
+        uses: docker/login-action@v3
+        if: ${{ vars.USE_GHCR_LOGIN == 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GHCR_PAT }}
+
+      - name: Build Linphone AppImage
+        run: CI_MODE=true ./start-build-container.sh
+
+      - name: Inspect build-output
+        run: |
+          echo 'Listing build-output directory'
+          ls -al build-output || true
+          echo 'Listing any AppImage files'
+          ls -al build-output/*.AppImage || true
+
+      - name: Upload AppImage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Linphone-AppImage
+          path: build-output/*.AppImage
+
+      - name: Prepare release metadata
+        id: prep_release
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          set -e
+          RELEASE_TAG="weekly-$(date -u +%Y%m%d)"
+          RELEASE_NAME="Weekly AppImage build $(date -u +%F)"
+          echo "release_tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          echo "release_name=$RELEASE_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update GitHub Release and upload AppImage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.prep_release.outputs.release_tag }}
+          RELEASE_NAME: ${{ steps.prep_release.outputs.release_name }}
+        run: |
+          set -e
+          APPIMAGE=$(ls build-output/*.AppImage 2>/dev/null | head -n1 || true)
+          if [ -z "$APPIMAGE" ]; then
+            echo "No AppImage found — skipping release upload"
+            exit 0
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG exists - uploading (will overwrite existing asset if present)"
+            gh release upload "$TAG" "$APPIMAGE" --clobber
+          else
+            echo "Creating release $TAG and uploading asset"
+            gh release create "$TAG" "$APPIMAGE" -t "$RELEASE_NAME" -n "Weekly build"
+          fi

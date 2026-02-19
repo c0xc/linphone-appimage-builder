@@ -1,23 +1,8 @@
-name: Build AppImage
+name: Daily Build & Release AppImage
 
 on:
-  workflow_dispatch:
-    inputs:
-      use_fork:
-        description: 'Use fork instead of official repo'
-        required: false
-        type: boolean
-        default: false
-      source_ref:
-        description: 'Optional linphone-desktop branch or tag to build (e.g. main or refs/tags/v1.2). Leave empty to use the default remote branch.'
-        required: false
-        type: string
-        default: ''
-      release_name:
-        description: 'Optional human-readable release title/label (no effect on release tag).'
-        required: false
-        type: string
-        default: ''
+  schedule:
+    - cron: '0 0 * * *' # daily (00:00 UTC every day)
 
 permissions:
   contents: write
@@ -29,8 +14,7 @@ jobs:
     env:
       QT6_BASE_IMAGE: ${{ secrets.QT6_BASE_IMAGE_REF || 'ghcr.io/c0xc/qt6-fedora:6.10.1' }}
       CTR: docker
-      USE_FORK: ${{ inputs.use_fork }}
-      LINPHONE_REF: ${{ github.event.inputs.source_ref || '' }}
+      USE_FORK: false
 
     steps:
       - name: Checkout
@@ -69,32 +53,10 @@ jobs:
         id: prep_release
         env:
           GITHUB_SHA: ${{ github.sha }}
-          REF_IN: ${{ github.event.inputs.source_ref || github.ref }}
-          INPUT_RELEASE_NAME: ${{ github.event.inputs.release_name || '' }}
         run: |
           set -e
-          SHORT_SHA=${GITHUB_SHA::7}
-          REF="$REF_IN"
-
-          # normalize input/ref
-          if echo "$REF" | grep -q '^refs/'; then
-            NORMAL_REF="$REF"
-          else
-            NORMAL_REF="$REF"
-          fi
-
-          if echo "$NORMAL_REF" | grep -q '^refs/tags/'; then
-            RELEASE_TAG="${NORMAL_REF#refs/tags/}"
-            RELEASE_NAME="${INPUT_RELEASE_NAME:-Manual AppImage build for tag ${RELEASE_TAG}}"
-          else
-            if echo "$NORMAL_REF" | grep -q '^refs/heads/'; then
-              BRANCH="${NORMAL_REF#refs/heads/}"
-            else
-              BRANCH="$NORMAL_REF"
-            fi
-            RELEASE_TAG="manual-${BRANCH}-${SHORT_SHA}-$(date -u +%Y%m%d)"
-            RELEASE_NAME="${INPUT_RELEASE_NAME:-Manual AppImage build for ${BRANCH} (${SHORT_SHA})}"
-          fi
+          RELEASE_TAG="daily-$(date -u +%Y%m%d)"
+          RELEASE_NAME="Daily AppImage build $(date -u +%F)"
           echo "release_tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
           echo "release_name=$RELEASE_NAME" >> "$GITHUB_OUTPUT"
 
@@ -110,19 +72,10 @@ jobs:
             echo "No AppImage found — skipping release upload"
             exit 0
           fi
-
-          # create or update release using gh CLI (clobber existing asset)
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG exists — uploading (will overwrite existing asset if present)"
             gh release upload "$TAG" "$APPIMAGE" --clobber
           else
             echo "Creating release $TAG and uploading asset"
-            gh release create "$TAG" "$APPIMAGE" -t "$RELEASE_NAME" -n "AppImage build"
+            gh release create "$TAG" "$APPIMAGE" -t "$RELEASE_NAME" -n "Automated daily AppImage build"
           fi
-
-      # Optional: upload the AppDir tarball artifact for debugging
-      # - name: Upload AppDir tarball artifact
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: Linphone-AppDir
-      #     path: build-output/Linphone-AppDir.tar.gz

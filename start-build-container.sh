@@ -153,6 +153,9 @@ run_build() {
     if [ -n "${USE_FORK}" ]; then
         env_args+=(--env "USE_FORK=${USE_FORK}")
     fi
+    if [ -n "${LINPHONE_REF:-}" ]; then
+        env_args+=(--env "LINPHONE_REF=${LINPHONE_REF}")
+    fi
 
     if [ "${CI_MODE}" = "true" ]; then
         info "Running in CI mode (non-interactive)"
