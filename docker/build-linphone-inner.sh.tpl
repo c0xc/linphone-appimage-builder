@@ -47,8 +47,9 @@ elif [ -f "${BUILD_DIR}/linphone-desktop.tar.xz" ]; then
     fi
 else
     # Clone from git repository (official or fork)
-    echo "Cloning Linphone repository (branch: ${repo_ref}) from: ${repo_url}..."
-    git clone --branch "${repo_ref}" --depth 1 "${repo_url}" linphone-desktop
+    echo "Cloning Linphone repository (ref: ${repo_ref}) from: ${repo_url}..."
+    # Use --tags to fetch tags alongside shallow clone - required for git describe in CMake
+    git clone --branch "${repo_ref}" --depth 1 --tags "${repo_url}" linphone-desktop
 fi
 
 # Enter Linphone source directory
