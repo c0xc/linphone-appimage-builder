@@ -160,10 +160,27 @@ run_build() {
     if [ "${CI_MODE}" = "true" ]; then
         info "Running in CI mode (non-interactive)"
         mount_args+=(--volume "${OUTPUT_DIR}:/output${VOLUME_SUFFIX}")
-        
+
+        # Copy tarball into container if it exists (for offline/tarball builds)
+        local tarball_args=()
+        if [ -f "${SCRIPT_DIR}/linphone-desktop.tar.gz" ]; then
+            info "Found linphone-desktop.tar.gz, copying to container..."
+            # Resolve symlink to get actual filename for version detection
+            local tarball_name="linphone-desktop.tar.gz"
+            if [ -L "${SCRIPT_DIR}/linphone-desktop.tar.gz" ]; then
+                tarball_name=$(basename "$(readlink -f "${SCRIPT_DIR}/linphone-desktop.tar.gz")")
+                info "Symlink resolved to: ${tarball_name}"
+            fi
+            tarball_args+=(--volume "${SCRIPT_DIR}/linphone-desktop.tar.gz:/build/${tarball_name}${VOLUME_SUFFIX}")
+        elif [ -f "${SCRIPT_DIR}/linphone-desktop.tar.xz" ]; then
+            info "Found linphone-desktop.tar.xz, copying to container..."
+            tarball_args+=(--volume "${SCRIPT_DIR}/linphone-desktop.tar.xz:/build/linphone-desktop.tar.xz${VOLUME_SUFFIX}")
+        fi
+
         "${CTR}" run --rm \
             --name "${CONTAINER_NAME}" \
             "${mount_args[@]}" \
+            "${tarball_args[@]}" \
             "${env_args[@]}" \
             "${IMAGE_NAME}" \
             /bin/bash -c "
