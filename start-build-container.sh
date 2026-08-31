@@ -7,6 +7,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Configuration
+# Set QT6_VERSION to override: 6.10.1
+# Set QT6_BASE_IMAGE to override: qt-6.10.1-fedora
+QT6_VERSION="${QT6_VERSION:-6.10.1}"
+if [ -z "${QT6_BASE_IMAGE:-}" ]; then
+    QT6_BASE_IMAGE="ghcr.io/c0xc/qt6-fedora:${QT6_VERSION}"
+fi
 QT6_BASE_IMAGE="${QT6_BASE_IMAGE:-qt-6.10.1-fedora}"
 IMAGE_NAME="linphone-build-env:fedora-qt6"
 CONTAINER_NAME="linphone-build"
@@ -89,33 +95,39 @@ check_base_image() {
         ghcr_image="ghcr.io/c0xc/${QT6_BASE_IMAGE}"
     fi
 
-    warn "Base image not found locally, trying ${ghcr_image}..."
+    local attempt=1
+    local max_attempts=3
+    while [ $attempt -le $max_attempts ]; do
+        warn "Base image not found locally, trying ${ghcr_image} (attempt ${attempt}/${max_attempts})..."
 
-    if "${CTR}" pull "${ghcr_image}"; then
-        # Tag pulled image to the local expected name if different
-        if [[ "${ghcr_image}" != "${QT6_BASE_IMAGE}" ]]; then
-            "${CTR}" tag "${ghcr_image}" "${QT6_BASE_IMAGE}" || true
-            info "Pulled and tagged: ${ghcr_image} -> ${QT6_BASE_IMAGE}"
-        else
-            info "Pulled: ${ghcr_image}"
-        fi
-        return 0
-    fi
-
-    # If the ghcr fallback failed, try a common alternative naming scheme.
-    # Example: local tag `qt-6.10.1-fedora` -> remote `ghcr.io/c0xc/qt6-fedora:6.10.1`
-    if [[ "${QT6_BASE_IMAGE}" =~ ^qt-([0-9]+\.[0-9]+\.[0-9]+)-fedora$ ]]; then
-        local ver="${BASH_REMATCH[1]}"
-        local alt="ghcr.io/c0xc/qt6-fedora:${ver}"
-        info "Fallback: trying alternative GHCR name ${alt}..."
-        if "${CTR}" pull "${alt}"; then
-            "${CTR}" tag "${alt}" "${QT6_BASE_IMAGE}" >/dev/null 2>&1 || true
-            info "Pulled and tagged: ${alt} -> ${QT6_BASE_IMAGE}"
+        if "${CTR}" pull "${ghcr_image}"; then
+            # Tag pulled image to the local expected name if different
+            if [[ "${ghcr_image}" != "${QT6_BASE_IMAGE}" ]]; then
+                "${CTR}" tag "${ghcr_image}" "${QT6_BASE_IMAGE}" || true
+                info "Pulled and tagged: ${ghcr_image} -> ${QT6_BASE_IMAGE}"
+            else
+                info "Pulled: ${ghcr_image}"
+            fi
             return 0
         fi
-    fi
 
-    error "Base image ${QT6_BASE_IMAGE} not found locally or on ghcr.io/c0xc"
+        # If the ghcr fallback failed, try a common alternative naming scheme.
+        # Example: local tag `qt-6.10.1-fedora` -> remote `ghcr.io/c0xc/qt6-fedora:6.10.1`
+        if [[ "${QT6_BASE_IMAGE}" =~ ^qt-([0-9]+\.[0-9]+\.[0-9]+)-fedora$ ]]; then
+            local ver="${BASH_REMATCH[1]}"
+            local alt="ghcr.io/c0xc/qt6-fedora:${ver}"
+            info "Fallback: trying alternative GHCR name ${alt}..."
+            if "${CTR}" pull "${alt}"; then
+                "${CTR}" tag "${alt}" "${QT6_BASE_IMAGE}" >/dev/null 2>&1 || true
+                info "Pulled and tagged: ${alt} -> ${QT6_BASE_IMAGE}"
+                return 0
+            fi
+        fi
+
+        attempt=$((attempt + 1))
+    done
+
+    error "Base image ${QT6_BASE_IMAGE} not found locally or on ghcr.io/c0xc after ${max_attempts} attempts"
     exit 1
 }
 
