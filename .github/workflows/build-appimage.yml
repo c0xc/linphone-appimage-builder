@@ -42,6 +42,8 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
 
       - name: Log in to GHCR (am supposed to make my base image private)
         uses: docker/login-action@v3
@@ -60,12 +62,12 @@ jobs:
       #     restore-keys: |
       #       docker-{{ runner.os }}-
 
-      - name: Pre-cache Qt6 base image
-        run: |
-          echo "Pulling base image ${{ env.QT6_BASE_IMAGE }}..."
-          if ! docker pull "${{ env.QT6_BASE_IMAGE }}"; then
-            echo "Base image pull may be rate limited; script will retry"
-          fi
+      #- name: Pre-cache Qt6 base image
+      #  run: |
+      #    echo "Pulling base image ${{ env.QT6_BASE_IMAGE }}..."
+      #    if ! docker pull "${{ env.QT6_BASE_IMAGE }}"; then
+      #      echo "Base image pull may be rate limited; script will retry"
+      #    fi
 
       - name: Build Linphone AppImage
         run: CI_MODE=true ./start-build-container.sh
