@@ -80,7 +80,7 @@ check_base_image() {
         info "Found base image: ${QT6_BASE_IMAGE}"
         return 0
     fi
-    
+
     if image_exists "localhost/${QT6_BASE_IMAGE}"; then
         QT6_BASE_IMAGE="localhost/${QT6_BASE_IMAGE}"
         info "Found base image: ${QT6_BASE_IMAGE}"
@@ -99,6 +99,7 @@ check_base_image() {
     local max_attempts=3
     while [ $attempt -le $max_attempts ]; do
         warn "Base image not found locally, trying ${ghcr_image} (attempt ${attempt}/${max_attempts})..."
+        sleep 3
 
         if "${CTR}" pull "${ghcr_image}"; then
             # Tag pulled image to the local expected name if different
