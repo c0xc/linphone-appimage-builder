@@ -49,6 +49,25 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GHCR_PAT }}
 
+      # Cache Docker layers for the base image (alternative to pre-pull)
+      # - name: Cache Docker layers
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: /tmp/.docker-cache
+      #     key: docker-{{ runner.os }}-{{ hashFiles('docker/Dockerfile.fedora-qt6') }}
+      #     restore-keys: |
+      #       docker-{{ runner.os }}-
+
+      - name: Pre-cache Qt6 base image
+        run: |
+          # Pull base image early to avoid rate limits during the main build
+          # Use set +e so we don't fail if the pull is rate-limited (script will retry)
+          set +e
+          echo "Pulling base image ${{ env.QT6_BASE_IMAGE }}..."
+          if ! docker pull "${{ env.QT6_BASE_IMAGE }}" >/dev/null 2>&1; then
+            echo "Base image pull may be rate limited; script will retry"
+          fi
+
       - name: Build Linphone AppImage
         run: CI_MODE=true ./start-build-container.sh
 
