@@ -62,11 +62,8 @@ jobs:
 
       - name: Pre-cache Qt6 base image
         run: |
-          # Pull base image early to avoid rate limits during the main build
-          # Use set +e so we don't fail if the pull is rate-limited (script will retry)
-          set +e
           echo "Pulling base image ${{ env.QT6_BASE_IMAGE }}..."
-          if ! docker pull "${{ env.QT6_BASE_IMAGE }}" >/dev/null 2>&1; then
+          if ! docker pull "${{ env.QT6_BASE_IMAGE }}"; then
             echo "Base image pull may be rate limited; script will retry"
           fi
 
