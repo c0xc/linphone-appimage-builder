@@ -28,6 +28,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       #QT6_BASE_IMAGE: ${{ secrets.QT6_BASE_IMAGE_REF || 'ghcr.io/c0xc/qt6-fedora:6.10.1' }}
+      QT6_VERSION: ${{ vars.QT6_VERSION || '6.10.1' }}
+      QT6_BASE_IMAGE: ${{ secrets.QT6_BASE_IMAGE_REF || format('ghcr.io/c0xc/qt6-fedora:{0}', vars.QT6_VERSION || '6.10.1') }}
       CTR: docker
       USE_FORK: ${{ inputs.use_fork }}
       LINPHONE_REF: ${{ github.event.inputs.source_ref || '' }}
