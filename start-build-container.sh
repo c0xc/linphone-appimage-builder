@@ -96,10 +96,9 @@ check_base_image() {
     fi
 
     local attempt=1
-    local max_attempts=3
+    local max_attempts=10
     while [ $attempt -le $max_attempts ]; do
         warn "Base image not found locally, trying ${ghcr_image} (attempt ${attempt}/${max_attempts})..."
-        sleep 3
 
         if "${CTR}" pull "${ghcr_image}"; then
             # Tag pulled image to the local expected name if different
@@ -126,6 +125,7 @@ check_base_image() {
         fi
 
         attempt=$((attempt + 1))
+        sleep $((2 ** attempt))
     done
 
     error "Base image ${QT6_BASE_IMAGE} not found locally or on ghcr.io/c0xc after ${max_attempts} attempts"

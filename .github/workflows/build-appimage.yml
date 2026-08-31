@@ -53,20 +53,6 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GHCR_PAT }}
 
-      # Cache Docker layers for the base image (alternative to pre-pull)
-      # - name: Cache Docker layers
-      #   uses: actions/cache@v4
-      #   with:
-      #     path: /tmp/.docker-cache
-      #     key: docker-{{ runner.os }}-{{ hashFiles('docker/Dockerfile.fedora-qt6') }}
-      #     restore-keys: |
-      #       docker-{{ runner.os }}-
-
-      - name: Pre-cache Qt6 base image
-        run: |
-          echo "Pulling base image ${{ env.QT6_BASE_IMAGE }}..."
-          docker pull "$QT6_BASE_IMAGE"
-
       - name: Build Linphone AppImage
         run: CI_MODE=true ./start-build-container.sh
 
