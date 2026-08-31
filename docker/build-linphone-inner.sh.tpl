@@ -91,17 +91,17 @@ fi
 # Check if linphone-desktop has tags and git describe works
 # If not (tarball without .git, or shallow clone without tags), create a version tag
 echo "Checking linphone-desktop version info..."
+git config --global user.email "build@local" # linphone+p@c0xc.net
+git config --global user.name "c0xc" # "${GITHUB_ACTOR}"
 if ! git describe >/dev/null 2>&1; then
     echo "No git version info available, creating version tag..."
     if [ ! -d ".git" ]; then
         # Initialize a minimal git repo for tarball case
         git init -q
-        git config user.email "build@local"
-        git config user.name "Build"
         git add -A >/dev/null 2>&1 || true
         git commit -q -m "Initial commit (tarball build)"
     fi
-    
+
     # Try to extract version from tarball filename (e.g., linphone-desktop-6.1.0.tar.gz)
     VERSION=""
     if [ -n "${TARBALL_FOR_VERSION}" ]; then
