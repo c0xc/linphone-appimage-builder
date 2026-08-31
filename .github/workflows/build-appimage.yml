@@ -62,12 +62,10 @@ jobs:
       #     restore-keys: |
       #       docker-{{ runner.os }}-
 
-      #- name: Pre-cache Qt6 base image
-      #  run: |
-      #    echo "Pulling base image ${{ env.QT6_BASE_IMAGE }}..."
-      #    if ! docker pull "${{ env.QT6_BASE_IMAGE }}"; then
-      #      echo "Base image pull may be rate limited; script will retry"
-      #    fi
+      - name: Pre-cache Qt6 base image
+        run: |
+          echo "Pulling base image ${{ env.QT6_BASE_IMAGE }}..."
+          docker pull "$QT6_BASE_IMAGE"
 
       - name: Build Linphone AppImage
         run: CI_MODE=true ./start-build-container.sh
